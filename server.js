@@ -2,18 +2,29 @@
 
 const express = require('express');
 const http = require('http');
-const socketIo = require('socket.io');
+const {Server} = require('socket.io');
 const axios = require('axios');
-const geocode = require('./geocode'); // assuming you have a geocode module to convert coordinates to location name
-
+const geocode = require('./geocode'); // assuming you have a geocode module to convert coordinates to location namec
+const cors = require('cors')
 const PORT = process.env.PORT || 4000;
 
 const app = express();
+app.use(cors())
 const server = http.createServer(app);
-const io = socketIo(server);
+
+const io = new Server(server,{
+    cors:{
+        origin:"*",
+        methods:["GET","POST"],
+        credentials:true
+    }
+});
 
 app.use(express.json());
 
+app.get('/',()=>{
+    res.send("hello")
+})
 // Define the endpoint for fetching weather data
 app.post('/api/weather', async (req, res) => {
   try {
@@ -45,26 +56,9 @@ async function fetchWeather(lati, lon) {
   return  response.data;
 }
 
-//Establish WebSocket connection for real-time updates
-io.on('connection', (socket) => {
-  console.log('A client connected');
-
-  // Fetch weather data every 30 seconds and emit it to the client
-  const interval = setInterval(async () => {
-    try {
-      const weatherData = await fetchWeather(latitude, longitude);
-      socket.emit('weatherUpdate', weatherData);
-    } catch (error) {
-      console.error('Error fetching weather for WebSocket:', error);
-      // You may want to handle errors and emit appropriate messages here
-    }
-  }, 30000);
-
-  socket.on('disconnect', () => {
-    console.log('Client disconnected');
-    clearInterval(interval);
+io.on("connection", (socket) => {
+   console.log("Connection")
   });
-});
 
 server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
